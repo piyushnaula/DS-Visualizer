@@ -30,40 +30,39 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # This will generate the .next/standalone folder because of your config
 RUN npm run build
 
+# ... (Previous stages remain the same) ...
+
 # ==========================================
 # STAGE 3: RUNNER (Production Image)
 # ==========================================
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create a non-root user for security (Standard Best Practice)
+# 👇 ADD THIS LINE (Fixes the 404 Not Found error)
+ENV HOSTNAME="0.0.0.0"
+
+# Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# --- CRITICAL FOR PYODIDE ---
-# We must copy the public folder because Pyodide fetches WASM files 
-# from the client-side browser, so the server must serve them.
+# Copy the public folder
 COPY --from=builder /app/public ./public
 
-# Set permissions for the Next.js cache folder
-# --- FIX IS HERE: Added 'RUN' ---
+# Set permissions
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Copy the standalone build output
-# This contains the minimal server code needed to run the app
+# Copy the build output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Switch to the non-root user
+# Switch to non-root user
 USER nextjs
 
-# Expose the port
 EXPOSE 3000
-ENV PORT 3000
+ENV PORT=3000
 
-# Start the server
 CMD ["node", "server.js"]
