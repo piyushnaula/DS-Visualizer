@@ -49,8 +49,9 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 
 # Set permissions for the Next.js cache folder
-mkdir .next
-chown nextjs:nodejs .next
+# --- FIX IS HERE: Added 'RUN' ---
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
 
 # Copy the standalone build output
 # This contains the minimal server code needed to run the app
